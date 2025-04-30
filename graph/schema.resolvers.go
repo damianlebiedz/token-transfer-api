@@ -11,9 +11,9 @@ import (
 	"github.com/damianlebiedz/token-transfer-api/graph/model"
 )
 
-// Transfer is the resolver for the transfer field.
+// Transfer is the resolver for the service field.
 func (r *mutationResolver) Transfer(ctx context.Context, from string, to string, amount int32) (*model.TransferResult, error) {
-	panic(fmt.Errorf("not implemented: Transfer - transfer"))
+	panic(fmt.Errorf("not implemented: Transfer - service"))
 }
 
 // Empty is the resolver for the _empty field.
