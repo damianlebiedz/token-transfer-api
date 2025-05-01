@@ -1,39 +1,58 @@
 package main
 
 import (
+	"database/sql"
+	"github.com/joho/godotenv"
 	"log"
 	"net/http"
 	"os"
 
-	"github.com/99designs/gqlgen/graphql/handler"
-	"github.com/99designs/gqlgen/graphql/handler/extension"
-	"github.com/99designs/gqlgen/graphql/handler/lru"
-	"github.com/99designs/gqlgen/graphql/handler/transport"
-	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/damianlebiedz/token-transfer-api/graph"
-	"github.com/vektah/gqlparser/v2/ast"
+
+	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/playground"
+	_ "github.com/lib/pq"
 )
 
 const defaultPort = "8080"
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = defaultPort
 	}
 
-	srv := handler.New(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{}}))
+	connStr := os.Getenv("DATABASE_URL")
+	if connStr == "" {
+		log.Fatal("DATABASE_URL is not set")
+	}
 
-	srv.AddTransport(transport.Options{})
-	srv.AddTransport(transport.GET{})
-	srv.AddTransport(transport.POST{})
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		log.Fatal("Error opening database: ", err)
+	}
+	defer func(db *sql.DB) {
+		err := db.Close()
+		if err != nil {
 
-	srv.SetQueryCache(lru.New[*ast.QueryDocument](1000))
+		}
+	}(db)
 
-	srv.Use(extension.Introspection{})
-	srv.Use(extension.AutomaticPersistedQuery{
-		Cache: lru.New[string](100),
-	})
+	if err := db.Ping(); err != nil {
+		log.Fatal("Error pinging database: ", err)
+	}
+
+	log.Println("Connected to the database successfully!")
+
+	resolver := &graph.Resolver{}
+
+	schema := graph.NewExecutableSchema(graph.Config{Resolvers: resolver})
+	srv := handler.New(schema)
 
 	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
 	http.Handle("/query", srv)
