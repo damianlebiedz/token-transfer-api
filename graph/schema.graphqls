@@ -1,7 +1,3 @@
-# GraphQL schema example
-#
-# https://gqlgen.com/getting-started/
-
 type Mutation {
   transfer(from: String!, to: String!, amount: Int!): TransferResult!
 }
