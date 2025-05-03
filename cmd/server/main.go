@@ -1,6 +1,9 @@
 package main
 
 import (
+	"github.com/99designs/gqlgen/graphql/handler/extension"
+	"github.com/99designs/gqlgen/graphql/handler/transport"
+	"github.com/damianlebiedz/token-transfer-api/internal/models"
 	"github.com/joho/godotenv"
 	"log"
 	"net/http"
@@ -27,13 +30,23 @@ func main() {
 
 	db.Init()
 
+	err = db.DB.AutoMigrate(&models.Wallet{})
+	if err != nil {
+		return
+	}
+
 	resolver := &graph.Resolver{}
 	schema := graph.NewExecutableSchema(graph.Config{Resolvers: resolver})
 	srv := handler.New(schema)
 
-	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
+	srv.AddTransport(transport.Options{})
+	srv.AddTransport(transport.GET{})
+	srv.AddTransport(transport.POST{})
+	srv.Use(extension.Introspection{})
+
+	http.Handle("/playground", playground.Handler("GraphQL playground", "/query"))
 	http.Handle("/query", srv)
 
-	log.Printf("Connect to http://localhost:%s/ for GraphQL playground", port)
+	log.Printf("Connect to http://localhost:%s/playground for GraphQL playground", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
