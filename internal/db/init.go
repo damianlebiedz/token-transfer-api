@@ -44,9 +44,11 @@ func Init() {
 		return
 	}
 
-	var count int64
-	DB.Model(&models.Wallet{}).Count(&count)
-	if count == 0 {
-		DB.Create(&models.Wallet{Address: "0x0000000000000000000000000000000000000000", Balance: 1000000})
+	if os.Getenv("INIT_ENV") != "test" {
+		var count int64
+		DB.Model(&models.Wallet{}).Count(&count)
+		if count == 0 {
+			DB.Create(&models.Wallet{Address: "0x0000000000000000000000000000000000000000", Balance: 1000000})
+		}
 	}
 }
