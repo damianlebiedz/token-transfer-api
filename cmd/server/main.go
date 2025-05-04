@@ -4,7 +4,6 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/damianlebiedz/token-transfer-api/internal/models"
-	"github.com/joho/godotenv"
 	"log"
 	"net/http"
 	"os"
@@ -18,19 +17,14 @@ import (
 const defaultPort = "8080"
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
+	db.Init()
 
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = defaultPort
 	}
 
-	db.Init()
-
-	err = db.DB.AutoMigrate(&models.Wallet{})
+	err := db.DB.AutoMigrate(&models.Wallet{})
 	if err != nil {
 		return
 	}

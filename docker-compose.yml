@@ -17,5 +17,24 @@ services:
       - "8080:8080"
     command: /usr/local/bin/app
 
+  test:
+    build:
+      context: .
+    depends_on:
+      - postgres
+    env_file: .env
+#    working_dir: /app
+    command: "go test -v internal/service/transfer_test.go"
+    environment:
+      - INIT_ENV=test
+#    volumes:
+#      - .:/app
+    networks:
+      - test_network
+
 volumes:
   postgres_data:
+
+networks:
+  test_network:
+    driver: bridge
