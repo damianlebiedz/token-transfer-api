@@ -1,16 +1,16 @@
 package service_test
 
 import (
+	"github.com/damianlebiedz/token-transfer-api/internal/db"
+	"github.com/damianlebiedz/token-transfer-api/internal/models"
+	"github.com/damianlebiedz/token-transfer-api/internal/service"
+	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 	"sync"
 	"testing"
 	_ "time"
 
-	"github.com/damianlebiedz/token-transfer-api/internal/db"
-	"github.com/damianlebiedz/token-transfer-api/internal/models"
-	"github.com/damianlebiedz/token-transfer-api/internal/service"
 	_ "github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func setupTest(t *testing.T) {
