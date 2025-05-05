@@ -1,11 +1,26 @@
 services:
+
   postgres:
-    env_file: .env
     image: postgres:15-alpine
+    env_file: .env
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=db
+
+  postgres_test:
+    image: postgres:15-alpine
+    env_file: .env
+    ports:
+      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
+    tmpfs:
+      - /var/lib/postgresql/data
+    environment:
+      - POSTGRES_HOST=postgres_test
+      - POSTGRES_DB=test_db
 
   app:
     build:
@@ -16,25 +31,23 @@ services:
     ports:
       - "8080:8080"
     command: /usr/local/bin/app
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=db
+    restart: on-failure:1
 
   test:
     build:
       context: .
     depends_on:
-      - postgres
+      - postgres_test
     env_file: .env
-#    working_dir: /app
     command: "go test -v internal/service/transfer_test.go"
     environment:
       - INIT_ENV=test
-#    volumes:
-#      - .:/app
-    networks:
-      - test_network
+      - POSTGRES_HOST=postgres_test
+      - POSTGRES_DB=test_db
+    restart: on-failure:1
 
 volumes:
   postgres_data:
-
-networks:
-  test_network:
-    driver: bridge

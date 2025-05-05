@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
-	"github.com/damianlebiedz/token-transfer-api/internal/models"
 	"log"
 	"net/http"
 	"os"
@@ -22,11 +21,6 @@ func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = defaultPort
-	}
-
-	err := db.DB.AutoMigrate(&models.Wallet{})
-	if err != nil {
-		return
 	}
 
 	resolver := &graph.Resolver{}

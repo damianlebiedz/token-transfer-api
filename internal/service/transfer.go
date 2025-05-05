@@ -7,6 +7,7 @@ import (
 	"github.com/damianlebiedz/token-transfer-api/internal/models"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"log"
 )
 
 func Transfer(from string, to string, amount int) (int, error) {
@@ -33,6 +34,8 @@ func Transfer(from string, to string, amount int) (int, error) {
 				}
 				if err := tx.Create(&receiver).Error; err != nil {
 					return fmt.Errorf("failed to create receiver wallet: %w", err)
+				} else {
+					log.Printf("initialized wallet: %s with balance: 0", to)
 				}
 			} else {
 				return fmt.Errorf("failed to get receiver wallet: %w", err)
