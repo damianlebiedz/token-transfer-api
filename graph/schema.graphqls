@@ -1,0 +1,11 @@
+type Mutation {
+  transfer(from: String!, to: String!, amount: Int!): TransferResult!
+}
+
+type TransferResult {
+  balance: Int!
+}
+
+type Query {
+  _empty: String
+}
