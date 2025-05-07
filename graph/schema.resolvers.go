@@ -12,6 +12,7 @@ import (
 	"github.com/damianlebiedz/token-transfer-api/internal/service"
 )
 
+// Transfer mutation handling using service logic
 func (r *mutationResolver) Transfer(_ context.Context, from string, to string, amount int32) (*model.TransferResult, error) {
 	newBalance, err := service.Transfer(from, to, int(amount))
 	if err != nil {
