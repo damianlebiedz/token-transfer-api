@@ -14,11 +14,14 @@ import (
 )
 
 func setupTest(t *testing.T) {
+	// Initialize test DB
 	db.Init()
 
+	// Clear existing wallet data
 	err := db.DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.Wallet{}).Error
 	require.NoError(t, err)
 
+	// Create an initial test wallet
 	err = db.DB.Create(&models.Wallet{
 		Address: "A",
 		Balance: 10,
@@ -26,6 +29,7 @@ func setupTest(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// Test successful transfer and check if balance is updated correctly
 func TestTransfer_Success(t *testing.T) {
 	setupTest(t)
 
@@ -35,6 +39,7 @@ func TestTransfer_Success(t *testing.T) {
 	require.Equal(t, 0, newBalance)
 }
 
+// Test transfer with insufficient balance
 func TestTransfer_InsufficientBalance(t *testing.T) {
 	setupTest(t)
 
@@ -44,6 +49,7 @@ func TestTransfer_InsufficientBalance(t *testing.T) {
 	require.Contains(t, err.Error(), "insufficient balance")
 }
 
+// Test transfer when sender wallet does not exist
 func TestTransfer_WalletNotFound(t *testing.T) {
 	setupTest(t)
 
@@ -53,6 +59,7 @@ func TestTransfer_WalletNotFound(t *testing.T) {
 	require.Contains(t, err.Error(), "sender wallet not found")
 }
 
+// Test handling of race condition during concurrent transfers
 func TestTransfer_RaceCondition(t *testing.T) {
 	setupTest(t)
 

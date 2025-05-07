@@ -10,24 +10,30 @@ import (
 	"log"
 )
 
+// Transfer the tokens between wallets
 func Transfer(from string, to string, amount int) (int, error) {
+	// Ensure that the transfer amount is positive
 	if amount <= 0 {
 		return 0, errors.New("transfer amount must be greater than 0")
 	}
 
+	// Handle race conditions
 	err := db.DB.Transaction(func(tx *gorm.DB) error {
 		var sender models.Wallet
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&sender, "address = ?", from).Error; err != nil {
 			return fmt.Errorf("sender wallet not found: %w", err)
 		}
 
+		// Ensure the sender has sufficient balance
 		if sender.Balance < amount {
-			return errors.New("insufficient balance")
+			return fmt.Errorf("sender has insufficient balance: required %d, available %d", amount, sender.Balance)
 		}
 
+		// Retrieve or create the receiver wallet
 		var receiver models.Wallet
 		if err := tx.First(&receiver, "address = ?", to).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
+				// If the receiver doesn't exist, initialize a new wallet with 0 balance
 				receiver = models.Wallet{
 					Address: to,
 					Balance: 0,
@@ -42,9 +48,11 @@ func Transfer(from string, to string, amount int) (int, error) {
 			}
 		}
 
+		// Perform the transfer
 		sender.Balance -= amount
 		receiver.Balance += amount
 
+		// Update the balances
 		if err := tx.Save(&sender).Error; err != nil {
 			return fmt.Errorf("failed to update sender: %w", err)
 		}
@@ -59,6 +67,7 @@ func Transfer(from string, to string, amount int) (int, error) {
 		return 0, err
 	}
 
+	// Load updated sender wallet
 	var updatedSender models.Wallet
 	if err := db.DB.First(&updatedSender, "address = ?", from).Error; err != nil {
 		return 0, fmt.Errorf("failed to load updated sender: %w", err)
