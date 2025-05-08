@@ -52,6 +52,9 @@ TEST_POSTGRES_PASSWORD=your_test_password
 docker-compose up --build app
 ```
 
+> [!IMPORTANT]
+> If you are using Docker Desktop make sure it is turned on - otherwise docker-compose will not work.
+
 2. Access the GraphQL playground at: http://localhost:8080/playground
 This is where you can test the GraphQL queries and mutations.
 
@@ -64,6 +67,9 @@ mutation {
 }
 ```
 This mutation creates a second wallet and transfers a balance of 100 tokens from the initial wallet (0x000...0000) to the new one (0x000...0001). It returns the updated balance of the sender wallet after the transfer.
+
+> [!NOTE]
+> To close the connection press Ctrl+C.
 
 ## Tests
 
