@@ -1,0 +1,13 @@
+# Define mutation for transferring tokens between wallets
+type Mutation {
+  transfer(from: String!, to: String!, amount: Int!): TransferResult!
+}
+
+# The result returned after a successful transfer
+type TransferResult {
+  balance: Int!
+}
+
+type Query {
+  _empty: String
+}
