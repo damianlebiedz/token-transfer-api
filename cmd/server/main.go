@@ -1,16 +1,17 @@
 package main
 
 import (
+	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
+	"github.com/99designs/gqlgen/graphql/playground"
+
 	"log"
 	"net/http"
 	"os"
 
-	"github.com/99designs/gqlgen/graphql/handler"
-	"github.com/99designs/gqlgen/graphql/playground"
-	"github.com/damianlebiedz/token-transfer-api/graph"
-	"github.com/damianlebiedz/token-transfer-api/internal/db"
+	"token-transfer-api/graph"
+	"token-transfer-api/internal/db"
 )
 
 const defaultPort = "8080"
