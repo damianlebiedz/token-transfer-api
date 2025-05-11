@@ -11,10 +11,10 @@ import (
 	"strconv"
 	"sync"
 	"sync/atomic"
+	"token-transfer-api/graph/model"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/introspection"
-	"github.com/damianlebiedz/token-transfer-api/graph/model"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
 )
@@ -445,7 +445,7 @@ func (ec *executionContext) _Mutation_transfer(ctx context.Context, field graphq
 	}
 	res := resTmp.(*model.TransferResult)
 	fc.Result = res
-	return ec.marshalNTransferResult2ᚖgithubᚗcomᚋdamianlebiedzᚋtokenᚑtransferᚑapiᚋgraphᚋmodelᚐTransferResult(ctx, field.Selections, res)
+	return ec.marshalNTransferResult2ᚖtokenᚑtransferᚑapiᚋgraphᚋmodelᚐTransferResult(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_transfer(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3191,11 +3191,11 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 	return res
 }
 
-func (ec *executionContext) marshalNTransferResult2githubᚗcomᚋdamianlebiedzᚋtokenᚑtransferᚑapiᚋgraphᚋmodelᚐTransferResult(ctx context.Context, sel ast.SelectionSet, v model.TransferResult) graphql.Marshaler {
+func (ec *executionContext) marshalNTransferResult2tokenᚑtransferᚑapiᚋgraphᚋmodelᚐTransferResult(ctx context.Context, sel ast.SelectionSet, v model.TransferResult) graphql.Marshaler {
 	return ec._TransferResult(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNTransferResult2ᚖgithubᚗcomᚋdamianlebiedzᚋtokenᚑtransferᚑapiᚋgraphᚋmodelᚐTransferResult(ctx context.Context, sel ast.SelectionSet, v *model.TransferResult) graphql.Marshaler {
+func (ec *executionContext) marshalNTransferResult2ᚖtokenᚑtransferᚑapiᚋgraphᚋmodelᚐTransferResult(ctx context.Context, sel ast.SelectionSet, v *model.TransferResult) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")

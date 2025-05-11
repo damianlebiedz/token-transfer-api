@@ -2,8 +2,8 @@ package db
 
 import (
 	"fmt"
-	"github.com/damianlebiedz/token-transfer-api/internal/models"
 	"time"
+	"token-transfer-api/internal/models"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -24,7 +24,7 @@ func Init() {
 		log.Fatal("Missing one or more DB connection variables in .env file")
 	}
 
-	fmt.Printf("Connecting to DB with user: %s, host: %s...\n", user, host)
+	fmt.Printf("Connecting to DB on %s using user %s", host, user)
 
 	databaseURL := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", user, pass, host, db)
 
@@ -33,7 +33,6 @@ func Init() {
 
 	var err error
 	DB, err = gorm.Open(postgres.Open(databaseURL), &gorm.Config{})
-
 	if err != nil {
 		log.Fatalf("Cannot connect to database: %v", err)
 	}
@@ -43,7 +42,7 @@ func Init() {
 	// Automatically migrate the schema for the Wallet model to the database
 	err = DB.AutoMigrate(&models.Wallet{})
 	if err != nil {
-		return
+		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
 	// If not running in the test environment, initialize the database with a default wallet if it doesn't exist
@@ -56,7 +55,7 @@ func Init() {
 			Address := "0x0000000000000000000000000000000000000000"
 			Balance := 1000000
 			DB.Create(&models.Wallet{Address: Address, Balance: Balance})
-			log.Printf("initialized wallet: %s with balance: %d", Address, Balance)
+			log.Printf("Wallet %s initialized with balance %d", Address, Balance)
 		}
 	}
 }

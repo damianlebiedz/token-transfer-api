@@ -7,9 +7,8 @@ package graph
 import (
 	"context"
 	"fmt"
-
-	"github.com/damianlebiedz/token-transfer-api/graph/model"
-	"github.com/damianlebiedz/token-transfer-api/internal/service"
+	"token-transfer-api/graph/model"
+	"token-transfer-api/internal/service"
 )
 
 // Transfer mutation handling using service logic
@@ -22,12 +21,15 @@ func (r *mutationResolver) Transfer(_ context.Context, from string, to string, a
 	return &model.TransferResult{Balance: int32(newBalance)}, nil
 }
 
+// Empty is the resolver for the _empty field.
 func (r *queryResolver) Empty(_ context.Context) (*string, error) {
 	panic(fmt.Errorf("not implemented: Empty - _empty"))
 }
 
+// Mutation returns MutationResolver implementation.
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 
+// Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
 type mutationResolver struct{ *Resolver }
