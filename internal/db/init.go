@@ -47,15 +47,18 @@ func Init() {
 
 	// If not running in the test environment, initialize the database with a default wallet if it doesn't exist
 	if os.Getenv("INIT_ENV") != "test" {
-		var count int64
-		DB.Model(&models.Wallet{}).Count(&count)
-		log.Printf("Number of wallets in DB: %d\n", count)
+		initDefaultWallet("0x0000000000000000000000000000000000000000", 1000000)
+	}
+}
 
-		if count == 0 {
-			Address := "0x0000000000000000000000000000000000000000"
-			Balance := 1000000
-			DB.Create(&models.Wallet{Address: Address, Balance: Balance})
-			log.Printf("Wallet %s initialized with balance %d", Address, Balance)
-		}
+func initDefaultWallet(Address string, Balance int) {
+	var count int64
+	DB.Model(&models.Wallet{}).Count(&count)
+	log.Printf("Number of wallets in DB: %d\n", count)
+	if count == 0 {
+		DB.Create(&models.Wallet{Address: Address, Balance: Balance})
+		log.Printf("Wallet %s initialized with balance %d", Address, Balance)
+	} else {
+		log.Printf("Default wallet already initialized")
 	}
 }
