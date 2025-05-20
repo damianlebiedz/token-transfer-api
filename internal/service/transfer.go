@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-	"log"
+	"strings"
 	"token-transfer-api/internal/db"
 	"token-transfer-api/internal/models"
 )
@@ -16,44 +16,78 @@ func Transfer(from string, to string, amount int) (int, error) {
 		return 0, errors.New("transfer amount must be greater than 0")
 	}
 
+	var updatedBalance int
+
+	// Determine the order of addresses for locking in alphabetical order to avoid deadlocks
 	err := db.DB.Transaction(func(tx *gorm.DB) error {
-		var sender models.Wallet
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&sender, "address = ?", from).Error; err != nil {
-			return fmt.Errorf("sender wallet not found: %w", err)
-		}
-		if sender.Balance < amount {
-			return fmt.Errorf("sender has insufficient balance: required %d, available %d", amount, sender.Balance)
+		var firstAddr, secondAddr string
+		if from < to {
+			firstAddr, secondAddr = from, to
+		} else {
+			firstAddr, secondAddr = to, from
 		}
 
-		var receiver models.Wallet
-		if err := tx.First(&receiver, "address = ?", to).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				// If the receiver doesn't exist, initialize a new wallet with 0 balance
-				receiver = models.Wallet{
+		var firstWallet, secondWallet models.Wallet
+
+		// Lock first wallet
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&firstWallet, "address = ?", firstAddr).Error; err != nil {
+			if firstAddr == from {
+				return fmt.Errorf("sender wallet not found: %w", err)
+			} else {
+				return fmt.Errorf("receiver wallet not found: %w", err)
+			}
+		}
+
+		// Lock second wallet
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&secondWallet, "address = ?", secondAddr).Error; err != nil {
+			// If the receiver doesn't exist, initialize a new wallet with 0 balance
+			if errors.Is(err, gorm.ErrRecordNotFound) && secondAddr == to {
+				secondWallet = models.Wallet{
 					Address: to,
 					Balance: 0,
 				}
-				if err := tx.Create(&receiver).Error; err != nil {
-					return fmt.Errorf("failed to create receiver wallet: %w", err)
-				} else {
-					log.Printf("initialized wallet: %s with balance: 0", to)
+				if err := tx.Create(&secondWallet).Error; err != nil {
+					if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "UNIQUE constraint failed") {
+						// Someone else created it - load again
+						if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&secondWallet, "address = ?", to).Error; err != nil {
+							return fmt.Errorf("failed to re-load receiver after conflict: %w", err)
+						}
+					} else {
+						return fmt.Errorf("failed to create receiver wallet: %w", err)
+					}
 				}
 			} else {
-				return fmt.Errorf("failed to get receiver wallet: %w", err)
+				if secondAddr == from {
+					return fmt.Errorf("sender wallet not found: %w", err)
+				} else {
+					return fmt.Errorf("receiver wallet not found: %w", err)
+				}
 			}
+		}
+
+		var sender, receiver *models.Wallet
+		if from == firstWallet.Address {
+			sender, receiver = &firstWallet, &secondWallet
+		} else {
+			sender, receiver = &secondWallet, &firstWallet
+		}
+
+		if sender.Balance < amount {
+			return fmt.Errorf("sender has insufficient balance: required %d, available %d", amount, sender.Balance)
 		}
 
 		// Perform the transfer
 		sender.Balance -= amount
 		receiver.Balance += amount
 
-		// Update the balances
-		if err := tx.Save(&sender).Error; err != nil {
+		if err := tx.Save(sender).Error; err != nil {
 			return fmt.Errorf("failed to update sender: %w", err)
 		}
-		if err := tx.Save(&receiver).Error; err != nil {
+		if err := tx.Save(receiver).Error; err != nil {
 			return fmt.Errorf("failed to update receiver: %w", err)
 		}
+
+		updatedBalance = sender.Balance
 
 		return nil
 	})
@@ -62,11 +96,5 @@ func Transfer(from string, to string, amount int) (int, error) {
 		return 0, err
 	}
 
-	// Load updated sender wallet
-	var updatedSender models.Wallet
-	if err := db.DB.First(&updatedSender, "address = ?", from).Error; err != nil {
-		return 0, fmt.Errorf("failed to load updated sender: %w", err)
-	}
-
-	return updatedSender.Balance, nil
+	return updatedBalance, nil
 }
