@@ -37,6 +37,16 @@ func Init() {
 		log.Fatalf("Cannot connect to database: %v", err)
 	}
 
+	sqlDB, err := DB.DB()
+	if err != nil {
+		log.Fatalf("Cannot get generic database object: %v", err)
+	}
+
+	// Connection pool configuration
+	sqlDB.SetMaxOpenConns(20)
+	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetConnMaxLifetime(time.Hour)
+
 	log.Println("Connected to PostgreSQL with GORM")
 
 	// Automatically migrate the schema for the Wallet model to the database
