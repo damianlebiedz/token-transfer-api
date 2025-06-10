@@ -17,7 +17,7 @@ import (
 const defaultPort = "8080"
 
 func main() {
-	db.Init()
+	database := db.Init()
 
 	// Get the port from environment variable or use the default one
 	port := os.Getenv("PORT")
@@ -26,7 +26,7 @@ func main() {
 	}
 
 	// Set up the GraphQL schema with resolvers
-	resolver := &graph.Resolver{}
+	resolver := &graph.Resolver{DB: database}
 	schema := graph.NewExecutableSchema(graph.Config{Resolvers: resolver})
 	srv := handler.New(schema)
 

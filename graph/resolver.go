@@ -1,3 +1,7 @@
 package graph
 
-type Resolver struct{}
+import "gorm.io/gorm"
+
+type Resolver struct {
+	DB *gorm.DB
+}
