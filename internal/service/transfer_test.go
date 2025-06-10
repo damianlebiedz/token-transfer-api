@@ -13,53 +13,55 @@ import (
 	_ "github.com/stretchr/testify/assert"
 )
 
-func setupTest(t *testing.T) {
-	db.Init()
+func setupTest(t *testing.T) *gorm.DB {
+	testDB := db.Init()
 
 	// Clear existing wallet data
-	err := db.DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.Wallet{}).Error
+	err := testDB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.Wallet{}).Error
 	require.NoError(t, err)
+
+	return testDB
 }
 
 func TestTransfer_Success(t *testing.T) {
-	setupTest(t)
+	testDB := setupTest(t)
 
-	require.NoError(t, db.DB.Create(&models.Wallet{Address: "A", Balance: 10}).Error)
+	require.NoError(t, testDB.Create(&models.Wallet{Address: "A", Balance: 10}).Error)
 
-	newBalance, err := service.Transfer("A", "B", 10)
+	newBalance, err := service.Transfer(testDB, "A", "B", 10)
 
 	require.NoError(t, err)
 	require.Equal(t, 0, newBalance)
 }
 
 func TestTransfer_InsufficientBalance(t *testing.T) {
-	setupTest(t)
+	testDB := setupTest(t)
 
-	require.NoError(t, db.DB.Create(&models.Wallet{Address: "A", Balance: 10}).Error)
+	require.NoError(t, testDB.Create(&models.Wallet{Address: "A", Balance: 10}).Error)
 
-	_, err := service.Transfer("A", "B", 20)
+	_, err := service.Transfer(testDB, "A", "B", 20)
 
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "insufficient balance")
 }
 
 func TestTransfer_WalletNotFound(t *testing.T) {
-	setupTest(t)
+	testDB := setupTest(t)
 
-	require.NoError(t, db.DB.Create(&models.Wallet{Address: "A", Balance: 10}).Error)
+	require.NoError(t, testDB.Create(&models.Wallet{Address: "A", Balance: 10}).Error)
 
-	_, err := service.Transfer("B", "A", 10)
+	_, err := service.Transfer(testDB, "B", "A", 10)
 
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "sender wallet not found")
 }
 
 func TestTransfer_ConcurrentTransactionHandling(t *testing.T) {
-	setupTest(t)
+	testDB := setupTest(t)
 
-	require.NoError(t, db.DB.Create(&models.Wallet{Address: "A", Balance: 10}).Error)
+	require.NoError(t, testDB.Create(&models.Wallet{Address: "A", Balance: 10}).Error)
 
-	err := db.DB.Create(&models.Wallet{Address: "B", Balance: 10}).Error
+	err := testDB.Create(&models.Wallet{Address: "B", Balance: 10}).Error
 	require.NoError(t, err)
 
 	start := make(chan struct{})
@@ -69,19 +71,19 @@ func TestTransfer_ConcurrentTransactionHandling(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		<-start
-		_, _ = service.Transfer("B", "A", 1)
+		_, _ = service.Transfer(testDB, "B", "A", 1)
 	}()
 
 	go func() {
 		defer wg.Done()
 		<-start
-		_, _ = service.Transfer("A", "B", 4)
+		_, _ = service.Transfer(testDB, "A", "B", 4)
 	}()
 
 	go func() {
 		defer wg.Done()
 		<-start
-		_, _ = service.Transfer("A", "B", 7)
+		_, _ = service.Transfer(testDB, "A", "B", 7)
 	}()
 
 	close(start)
@@ -89,7 +91,7 @@ func TestTransfer_ConcurrentTransactionHandling(t *testing.T) {
 
 	var walletA models.Wallet
 
-	err = db.DB.First(&walletA, "address = ?", "A").Error
+	err = testDB.First(&walletA, "address = ?", "A").Error
 	require.NoError(t, err)
 
 	// Possible outcomes:
@@ -103,9 +105,9 @@ func TestTransfer_ConcurrentTransactionHandling(t *testing.T) {
 }
 
 func TestTransfer_ConcurrentReceiverCreation(t *testing.T) {
-	setupTest(t)
+	testDB := setupTest(t)
 
-	require.NoError(t, db.DB.Create(&models.Wallet{Address: "A", Balance: 10}).Error)
+	require.NoError(t, testDB.Create(&models.Wallet{Address: "A", Balance: 10}).Error)
 
 	start := make(chan struct{})
 	var wg sync.WaitGroup
@@ -114,25 +116,25 @@ func TestTransfer_ConcurrentReceiverCreation(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		<-start
-		_, _ = service.Transfer("A", "C", 5)
+		_, _ = service.Transfer(testDB, "A", "C", 5)
 	}()
 
 	go func() {
 		defer wg.Done()
 		<-start
-		_, _ = service.Transfer("A", "C", 5)
+		_, _ = service.Transfer(testDB, "A", "C", 5)
 	}()
 
 	close(start)
 	wg.Wait()
 
 	var walletC models.Wallet
-	err := db.DB.First(&walletC, "address = ?", "C").Error
+	err := testDB.First(&walletC, "address = ?", "C").Error
 	require.NoError(t, err)
 	require.Equal(t, 10, walletC.Balance)
 
 	var walletA models.Wallet
-	err = db.DB.First(&walletA, "address = ?", "A").Error
+	err = testDB.First(&walletA, "address = ?", "A").Error
 	require.NoError(t, err)
 	require.Equal(t, 0, walletA.Balance)
 
@@ -141,10 +143,10 @@ func TestTransfer_ConcurrentReceiverCreation(t *testing.T) {
 }
 
 func TestTransfer_ConcurrentDeadlock(t *testing.T) {
-	setupTest(t)
+	testDB := setupTest(t)
 
-	require.NoError(t, db.DB.Create(&models.Wallet{Address: "A", Balance: 100}).Error)
-	require.NoError(t, db.DB.Create(&models.Wallet{Address: "B", Balance: 100}).Error)
+	require.NoError(t, testDB.Create(&models.Wallet{Address: "A", Balance: 100}).Error)
+	require.NoError(t, testDB.Create(&models.Wallet{Address: "B", Balance: 100}).Error)
 
 	start := make(chan struct{})
 	var wg sync.WaitGroup
@@ -153,14 +155,14 @@ func TestTransfer_ConcurrentDeadlock(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		<-start
-		_, err := service.Transfer("A", "B", 30)
+		_, err := service.Transfer(testDB, "A", "B", 30)
 		require.NoError(t, err)
 	}()
 
 	go func() {
 		defer wg.Done()
 		<-start
-		_, err := service.Transfer("B", "A", 50)
+		_, err := service.Transfer(testDB, "B", "A", 50)
 		require.NoError(t, err)
 	}()
 
@@ -168,8 +170,8 @@ func TestTransfer_ConcurrentDeadlock(t *testing.T) {
 	wg.Wait()
 
 	var walletA, walletB models.Wallet
-	require.NoError(t, db.DB.First(&walletA, "address = ?", "A").Error)
-	require.NoError(t, db.DB.First(&walletB, "address = ?", "B").Error)
+	require.NoError(t, testDB.First(&walletA, "address = ?", "A").Error)
+	require.NoError(t, testDB.First(&walletB, "address = ?", "B").Error)
 
 	total := walletA.Balance + walletB.Balance
 
@@ -179,11 +181,11 @@ func TestTransfer_ConcurrentDeadlock(t *testing.T) {
 }
 
 func TestTransfer_Foo(t *testing.T) {
-	setupTest(t)
+	testDB := setupTest(t)
 
-	require.NoError(t, db.DB.Create(&models.Wallet{Address: "A", Balance: 1000}).Error)
-	require.NoError(t, db.DB.Create(&models.Wallet{Address: "B", Balance: 1000}).Error)
-	require.NoError(t, db.DB.Create(&models.Wallet{Address: "C", Balance: 0}).Error)
+	require.NoError(t, testDB.Create(&models.Wallet{Address: "A", Balance: 1000}).Error)
+	require.NoError(t, testDB.Create(&models.Wallet{Address: "B", Balance: 1000}).Error)
+	require.NoError(t, testDB.Create(&models.Wallet{Address: "C", Balance: 0}).Error)
 
 	var wg sync.WaitGroup
 	wg.Add(2000)
@@ -191,13 +193,13 @@ func TestTransfer_Foo(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		go func() {
 			defer wg.Done()
-			_, err := service.Transfer("A", "C", 1)
+			_, err := service.Transfer(testDB, "A", "C", 1)
 			require.NoError(t, err)
 		}()
 
 		go func() {
 			defer wg.Done()
-			_, err := service.Transfer("B", "C", 1)
+			_, err := service.Transfer(testDB, "B", "C", 1)
 			require.NoError(t, err)
 		}()
 	}
@@ -205,7 +207,7 @@ func TestTransfer_Foo(t *testing.T) {
 	wg.Wait()
 
 	var walletC models.Wallet
-	err := db.DB.First(&walletC, "address = ?", "C").Error
+	err := testDB.First(&walletC, "address = ?", "C").Error
 	require.NoError(t, err)
 
 	require.Equal(t, 2000, walletC.Balance)

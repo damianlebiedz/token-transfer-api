@@ -13,7 +13,7 @@ import (
 
 // Transfer mutation handling using service logic
 func (r *mutationResolver) Transfer(_ context.Context, from string, to string, amount int32) (*model.TransferResult, error) {
-	newBalance, err := service.Transfer(from, to, int(amount))
+	newBalance, err := service.Transfer(r.DB, from, to, int(amount))
 	if err != nil {
 		return nil, fmt.Errorf("transfer failed: %w", err)
 	}
