@@ -6,12 +6,11 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"strings"
-	"token-transfer-api/internal/db"
 	"token-transfer-api/internal/models"
 )
 
 // Transfer the tokens between wallets
-func Transfer(from string, to string, amount int) (int, error) {
+func Transfer(db *gorm.DB, from string, to string, amount int) (int, error) {
 	if amount <= 0 {
 		return 0, errors.New("transfer amount must be greater than 0")
 	}
@@ -19,7 +18,7 @@ func Transfer(from string, to string, amount int) (int, error) {
 	var updatedBalance int
 
 	// Determine the order of addresses for locking in alphabetical order to avoid deadlocks
-	err := db.DB.Transaction(func(tx *gorm.DB) error {
+	err := db.Transaction(func(tx *gorm.DB) error {
 		var firstAddr, secondAddr string
 		if from < to {
 			firstAddr, secondAddr = from, to

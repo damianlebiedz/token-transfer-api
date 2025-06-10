@@ -11,9 +11,7 @@ import (
 	"os"
 )
 
-var DB *gorm.DB
-
-func Init() {
+func Init() *gorm.DB {
 	// Initialize PostgreSQL connection using env variables
 	user := os.Getenv("POSTGRES_USER")
 	pass := os.Getenv("POSTGRES_PASSWORD")
@@ -23,19 +21,21 @@ func Init() {
 	if user == "" || pass == "" || host == "" || db == "" {
 		log.Fatal("Missing one or more DB connection variables in .env file")
 	}
+	databaseURL := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", user, pass, host, db)
 
 	fmt.Printf("Connecting to DB on %s using user %s", host, user)
-
-	databaseURL := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", user, pass, host, db)
 
 	// Wait 3 seconds to ensure the database container is up before connecting
 	time.Sleep(3 * time.Second)
 
 	var err error
-	DB, err = gorm.Open(postgres.Open(databaseURL), &gorm.Config{})
+
+	DB, err := gorm.Open(postgres.Open(databaseURL), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Cannot connect to database: %v", err)
 	}
+
+	log.Println("Connected to PostgreSQL with GORM")
 
 	sqlDB, err := DB.DB()
 	if err != nil {
@@ -47,8 +47,6 @@ func Init() {
 	sqlDB.SetMaxIdleConns(10)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	log.Println("Connected to PostgreSQL with GORM")
-
 	// Automatically migrate the schema for the Wallet model to the database
 	err = DB.AutoMigrate(&models.Wallet{})
 	if err != nil {
@@ -57,11 +55,12 @@ func Init() {
 
 	// If not running in the test environment, initialize the database with a default wallet if it doesn't exist
 	if os.Getenv("INIT_ENV") != "test" {
-		initDefaultWallet("0x0000000000000000000000000000000000000000", 1000000)
+		initDefaultWallet("0x0000000000000000000000000000000000000000", 1000000, DB)
 	}
+	return DB
 }
 
-func initDefaultWallet(Address string, Balance int) {
+func initDefaultWallet(Address string, Balance int, DB *gorm.DB) {
 	var count int64
 	DB.Model(&models.Wallet{}).Count(&count)
 	log.Printf("Number of wallets in DB: %d\n", count)
