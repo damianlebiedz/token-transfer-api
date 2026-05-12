@@ -80,6 +80,3 @@ docker-compose up --build test
 
 > [!NOTE]
 > You can configure your own tests in `transfer_test.go` file.
-
-## Contact
-Damian Lebiedź | https://damianlebiedz.github.io/contact.html
